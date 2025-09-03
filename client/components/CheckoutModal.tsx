@@ -19,8 +19,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
         <DialogHeader>
           <DialogTitle>Finalizar Compra</DialogTitle>
           <DialogDescription>
-            Preencha seus dados para ser redirecionado ao checkout seguro da
-            Zedy
+            Preencha seus dados para ser redirecionado ao checkout
           </DialogDescription>
         </DialogHeader>
         <CheckoutForm onClose={onClose} />

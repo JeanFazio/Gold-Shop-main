@@ -27,7 +27,7 @@ interface CheckoutFormProps {
 }
 
 export function CheckoutForm({ onClose }: CheckoutFormProps) {
-  useUtmCapture();  
+  useUtmCapture();
   const [showPixModal, setShowPixModal] = useState(false);
   const { getCartTotal } = useCart();
   const cartTotal = getCartTotal();
@@ -170,8 +170,7 @@ export function CheckoutForm({ onClose }: CheckoutFormProps) {
         customer_document: formData.document.replace(/\D/g, ""),
       });
 
-
-      // 2. Envia tracking Utmify
+      // Envia tracking Utmify
       await enviarConversaoUtmify({
         orderId: pixResp.id,
         amount: cartTotal,
@@ -187,12 +186,9 @@ export function CheckoutForm({ onClose }: CheckoutFormProps) {
         status: 'waiting_payment',
       });
 
-      // 3. Redireciona para o link do PIX
-      if (pixResp.secureUrl) {
-        window.location.href = pixResp.secureUrl;
-      } else {
-        alert("Erro ao gerar PIX: " + JSON.stringify(pixResp));
-      }
+      // Exibe modal com QR Code e dados do cliente
+      setPixData({ qrcode: pixResp.pix?.qrcode });
+      setShowPixModal(true);
 
     } catch (err) {
       console.error("Erro no checkout:", err);
@@ -209,22 +205,31 @@ export function CheckoutForm({ onClose }: CheckoutFormProps) {
     <>
       {showPixModal && pixData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
-          <div className="bg-white rounded-lg p-6 shadow-lg flex flex-col items-center max-w-xs w-full">
-            <h3 className="font-bold text-green-700 mb-2 text-lg">Pagamento PIX Gerado!</h3>
+          <div className="bg-white rounded-lg p-12 shadow-lg flex flex-col items-center max-w-md w-full">
+            <h3 className="font-bold text-green-700 mb-2 text-lg">Pagamento PIX</h3>
             <QRCodeCanvas value={pixData.qrcode || ''} size={220} style={{ marginBottom: 12 }} />
             <div className="mt-2 text-green-800 text-sm break-all text-center">
               <strong>Código Copia e Cola:</strong>
-              <div className="bg-gray-100 p-2 rounded border mt-1 select-all text-xs">{pixData.qrcode}</div>
+              <div className="bg-gray-100 p-2 rounded border mt-1 select-all text-xs">{pixData.qrcode ? pixData.qrcode : 'Código não disponível'}</div>
             </div>
-            <Button className="mt-4 w-full" onClick={() => { setShowPixModal(false); setPixData(null); }}>
+            <div className="w-full mt-4 mb-2 border-t pt-4">
+              <h4 className="font-semibold text-gray-700 mb-2 text-base text-left w-full">Dados do Cliente</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm">
+                <div><span className="font-medium">Nome:</span> {formData.name}</div>
+                <div><span className="font-medium">E-mail:</span> {formData.email}</div>
+                <div><span className="font-medium">Telefone:</span> {formData.phone}</div>
+                <div><span className="font-medium">CPF:</span> {formData.document}</div>
+              </div>
+            </div>
+            <Button className="mt-4 w-full bg-primarycolor hover:bg-primarycolor/90" onClick={() => { setShowPixModal(false); setPixData(null); }}>
               Fechar
             </Button>
           </div>
         </div>
       )}
-      <Card className="w-full max-w-lg mx-auto">
+      <Card className="w-full max-w-lg sm:max-w-full sm:rounded-none sm:shadow-none sm:border-0 max-h-[70vh] my-4 overflow-y-auto p-2 sm:p-0">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
             <CreditCard className="h-5 w-5" />
             Finalizar Pagamento
           </CardTitle>
@@ -249,7 +254,7 @@ export function CheckoutForm({ onClose }: CheckoutFormProps) {
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Dados do Cliente</h3>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label htmlFor="name">Nome Completo</Label>
                   <Input
@@ -320,15 +325,15 @@ export function CheckoutForm({ onClose }: CheckoutFormProps) {
                 setPaymentMethod(value as "credit_card" | "pix")
               }
             >
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-2 gap-2">
                 <TabsTrigger
                   value="credit_card"
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 text-xs sm:text-sm"
                 >
                   <CreditCard className="h-4 w-4" />
                   Cartão de Crédito
                 </TabsTrigger>
-                <TabsTrigger value="pix" className="flex items-center gap-2">
+                <TabsTrigger value="pix" className="flex items-center gap-2 text-xs sm:text-sm">
                   <QrCode className="h-4 w-4" />
                   PIX
                 </TabsTrigger>
@@ -347,7 +352,7 @@ export function CheckoutForm({ onClose }: CheckoutFormProps) {
                 <form onSubmit={handlePixSubmit} className="space-y-4">
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
                     <QrCode className="h-12 w-12 mx-auto mb-2 text-blue-600" />
-                    <h3 className="font-semibold text-blue-800">
+                    <h3 className="font-semibold text-blue-800 text-base sm:text-lg">
                       Pagamento via PIX
                     </h3>
                     <p className="text-sm text-blue-600 mt-1">
@@ -357,7 +362,7 @@ export function CheckoutForm({ onClose }: CheckoutFormProps) {
 
                   <Button
                     type="submit"
-                    className="w-full bg-primarycolor hover:bg-primarycolor/90"
+                    className="w-full bg-primarycolor hover:bg-primarycolor/90 text-xs sm:text-base"
                     disabled={combinedProcessing || !!validateForm()}
                   >
                     {combinedProcessing ? (
@@ -380,7 +385,7 @@ export function CheckoutForm({ onClose }: CheckoutFormProps) {
                 variant="outline"
                 onClick={onClose}
                 disabled={combinedProcessing}
-                className="w-full"
+                className="w-full text-xs sm:text-base"
               >
                 Cancelar
               </Button>
