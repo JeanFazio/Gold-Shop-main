@@ -1,15 +1,10 @@
 import path from "path";
-import { fileURLToPath } from "url";
-import { createServer } from "./index.js"; // atenção ao .js
+import { createServer } from "./index.js";
 import express from "express";
 
-// cria __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Paths
-const distPath = path.join(__dirname, "../spa");
-const logDir = path.join(__dirname, "../logs");
+// Paths usando resolve
+const distPath = path.resolve("./spa");
+const logDir = path.resolve("./logs");
 
 // Servidor
 const app = createServer();
