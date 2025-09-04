@@ -1,6 +1,9 @@
 // Funções para consumir a rota EzzyPag do backend Express
 import axios from 'axios';
 
+// Permite configurar o domínio do backend via variável de ambiente
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+
 export interface PixPaymentData {
   amount: number;
   description: string;
@@ -11,12 +14,12 @@ export interface PixPaymentData {
 }
 
 export async function criarPixBackend(data: PixPaymentData) {
-  const response = await axios.post('/api/ezzypag/pix', data);
+  const response = await axios.post(`${API_BASE_URL}/api/ezzypag/pix`, data);
   return response.data;
 }
 
 export async function consultarStatusBackend(id: string) {
-  const response = await axios.get(`/api/ezzypag/status/${encodeURIComponent(id)}`);
+  const response = await axios.get(`${API_BASE_URL}/api/ezzypag/status/${encodeURIComponent(id)}`);
   return response.data;
 }
 
@@ -31,6 +34,6 @@ export interface CardPaymentData {
 }
 
 export async function criarCartaoBackend(data: CardPaymentData) {
-  const response = await axios.post('/api/ezzypag/card', data);
+  const response = await axios.post(`${API_BASE_URL}/api/ezzypag/card`, data);
   return response.data;
 }
