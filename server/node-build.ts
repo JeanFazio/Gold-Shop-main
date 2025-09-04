@@ -3,8 +3,7 @@ import { createServer } from "./index.js";
 import express from "express";
 
 // Paths usando resolve
-const distPath = path.resolve("./spa");
-const logDir = path.resolve("./logs");
+const distPath = path.resolve(process.cwd(), "spa");
 
 // Servidor
 const app = createServer();
