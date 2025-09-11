@@ -57,7 +57,7 @@ interface BrandContextType {
 const BrandContext = createContext<BrandContextType | undefined>(undefined);
 
 export function BrandProvider({ children }: { children: ReactNode }) {
-  const [activeBrandId, setActiveBrandId] = useState(3);
+  const [activeBrandId, setActiveBrandId] = useState(1);
 
   const activeBrand =
     brands.find((brand) => brand.id === activeBrandId) || brands[0];

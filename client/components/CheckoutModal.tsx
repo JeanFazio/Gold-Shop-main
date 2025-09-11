@@ -22,7 +22,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
             Preencha seus dados para ser redirecionado ao checkout
           </DialogDescription>
         </DialogHeader>
-        <CheckoutForm onClose={onClose} />
+        <CheckoutForm onClose={onClose} total={0} />
       </DialogContent>
     </Dialog>
   );
