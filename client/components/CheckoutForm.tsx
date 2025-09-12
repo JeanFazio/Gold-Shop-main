@@ -24,13 +24,14 @@ import { Loader2, CreditCard, QrCode } from "lucide-react";
 
 interface CheckoutFormProps {
   onClose?: () => void;
+  total?: number;
 }
 
-export function CheckoutForm({ onClose }: CheckoutFormProps) {
+export function CheckoutForm({ onClose, total }: CheckoutFormProps) {
   useUtmCapture();
   const [showPixModal, setShowPixModal] = useState(false);
   const { getCartTotal } = useCart();
-  const cartTotal = getCartTotal();
+  const cartTotal = typeof total === 'number' ? total : getCartTotal();
   const [pixData, setPixData] = useState<{ qrcode?: string } | null>(null);
   const { processCheckout, isProcessing, error, clearError } = useCheckout();
   const {

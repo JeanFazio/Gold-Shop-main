@@ -10,9 +10,10 @@ import { CheckoutForm } from "./CheckoutForm";
 interface CheckoutModalProps {
   isOpen: boolean;
   onClose: () => void;
+  total: number;
 }
 
-export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
+export function CheckoutModal({ isOpen, onClose, total }: CheckoutModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
@@ -22,7 +23,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
             Preencha seus dados para ser redirecionado ao checkout
           </DialogDescription>
         </DialogHeader>
-        <CheckoutForm onClose={onClose} total={0} />
+        <CheckoutForm onClose={onClose} total={total} />
       </DialogContent>
     </Dialog>
   );

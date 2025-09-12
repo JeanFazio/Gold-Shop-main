@@ -126,7 +126,8 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+      font-family: Montserrat, Montserrat Fallback, Arial, sans-serif;
+      @apply bg-background text-foreground;
   }
 
   button {
