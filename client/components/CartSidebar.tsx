@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -30,6 +30,8 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
   const [deliveryData, setDeliveryData] = useState<DeliveryData | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const {
     cartItems,
     updateQuantity,
@@ -60,6 +62,14 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
     });
     setIsDeliveryModalOpen(false);
   };
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setDropdownOpen(false);
+    }
+    if (dropdownOpen) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [dropdownOpen]);
 
   if (!isOpen) return null;
 
@@ -210,45 +220,84 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                       Adicionar Endereço
                     </Button>
                   ) : (
-                    <div className="border rounded-lg p-3 mb-2 bg-gray-50">
-                      <h4 className="font-semibold text-sm mb-1">Endereço cadastrado</h4>
-                      <div className="text-xs text-muted-foreground mb-2">
+                    <div className="border rounded-xl p-4 mb-2 bg-gradient-to-br from-gray-50 to-white shadow-sm flex flex-col gap-2">
+                      <div className="flex items-center gap-3 mb-2">
+                        {/* Ícone de endereço */}
+                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primarycolor/10">
+                          <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M12 2C7.03 2 3 6.03 3 11c0 5.25 7.05 10.39 8.09 11.13a1 1 0 0 0 1.13 0C13.95 21.39 21 16.25 21 11c0-4.97-4.03-9-9-9Zm0 15a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z" fill="#F5B700" /></svg>
+                        </span>
+                        <h4 className="font-semibold text-base">Endereço cadastrado</h4>
+                      </div>
+                      <div className="text-xs text-muted-foreground grid grid-cols-2 gap-x-4 gap-y-1 mb-2">
                         <div><span className="font-medium">Identificação:</span> {deliveryData.identificacao}</div>
                         <div><span className="font-medium">CEP:</span> {deliveryData.cep}</div>
                         <div><span className="font-medium">Estado:</span> {deliveryData.estado}</div>
-                        <div><span className="font-medium">Cidade:</span> {deliveryData.cidade}</div>
                         <div><span className="font-medium">Bairro:</span> {deliveryData.bairro}</div>
-                        <div><span className="font-medium">Rua:</span> {deliveryData.rua}</div>
-                        <div><span className="font-medium">Número:</span> {deliveryData.numero}</div>
-                        <div><span className="font-medium">Complemento:</span> {deliveryData.complemento}</div>
+                        <div className="col-span-2"><span className="font-medium">Rua:</span> {deliveryData.rua}</div>
                       </div>
                       <Button
                         variant="outline"
-                        className="w-full"
+                        className="w-full mb-2"
                         onClick={handleOpenDeliveryModal}
                       >Editar Endereço</Button>
-                      <div className="mt-3">
+                      <div className="mt-2">
                         <label className="block text-sm font-medium mb-1">Escolha o frete:</label>
-                        <div className="flex gap-4 mt-2">
-                          <label className="flex items-center gap-2">
-                            <input
-                              type="radio"
-                              name="tipoFrete"
-                              value="PAC"
-                              checked={deliveryData.tipoFrete !== "SEDEX"}
-                              onChange={() => setDeliveryData({ ...deliveryData, tipoFrete: "PAC" })}
-                            /> PAC {subtotal > 100 ? "(Grátis)" : "R$ 5,99"}
-                          </label>
-                          <label className="flex items-center gap-2">
-                            <input
-                              type="radio"
-                              name="tipoFrete"
-                              value="SEDEX"
-                              checked={deliveryData.tipoFrete === "SEDEX"}
-                              onChange={() => setDeliveryData({ ...deliveryData, tipoFrete: "SEDEX" })}
-                            /> SEDEX (R$ 14,62)
-                          </label>
+                        <div className="relative" ref={dropdownRef}>
+                          <button
+                            type="button"
+                            className="w-full flex items-center justify-between px-4 py-2 rounded-lg border bg-white shadow-sm text-sm font-medium cursor-pointer"
+                            onClick={() => setDropdownOpen((v) => !v)}
+                          >
+                            {deliveryData.tipoFrete === "SEDEX" ? "SEDEX (Entrega rápida)" : deliveryData.tipoFrete === "PAC" ? "PAC (Econômico)" : "Selecione o frete"}
+
+                          </button>
+                          {dropdownOpen && (
+                            <div className="absolute left-0 w-full mt-2 bg-white border rounded-lg shadow-lg z-10">
+                              <button
+                                type="button"
+                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primarycolor/10 transition"
+                                onClick={() => { setDeliveryData({ ...deliveryData, tipoFrete: "PAC" }); setDropdownOpen(false); }}
+                              >
+
+                                <span className="flex flex-col text-left">
+                                  <span className="font-bold text-[#0057B8]">PAC</span>
+                                  <span className="text-xs text-muted-foreground">7-10 dias úteis • {subtotal > 100 ? "Grátis" : "R$ 5,99"}</span>
+                                </span>
+                              </button>
+                              <button
+                                type="button"
+                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-primarycolor/10 transition"
+                                onClick={() => { setDeliveryData({ ...deliveryData, tipoFrete: "SEDEX" }); setDropdownOpen(false); }}
+                              >
+                                <span className="flex flex-col text-left">
+                                  <span className="font-bold text-[#F5B700]">SEDEX</span>
+                                  <span className="text-xs text-muted-foreground">3-5 dias úteis • R$ 14,62</span>
+                                </span>
+                              </button>
+                            </div>
+                          )}
                         </div>
+                        {deliveryData.tipoFrete && (
+                          <div className={`mt-3 p-4 rounded-xl border shadow-sm flex items-center gap-4 ${deliveryData.tipoFrete === "SEDEX" ? "border-primarycolor bg-primarycolor/10" : "border-[#0057B8] bg-[#0057B8]/10"}`}>
+                            <div className="flex flex-col flex-1">
+                              <span className={`font-bold text-base ${deliveryData.tipoFrete === "SEDEX" ? "text-[#F5B700]" : "text-[#0057B8]"}`}>
+                                {deliveryData.tipoFrete === "SEDEX" ? "SEDEX" : "PAC"}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {deliveryData.tipoFrete === "SEDEX"
+                                  ? "Entrega expressa: 3-5 dias úteis. Chega mais rápido."
+                                  : "Entrega padrão: 7-10 dias úteis. Mais econômico."}
+                              </span>
+                            </div>
+                            <div className="flex flex-col items-end">
+                              <span className="font-semibold text-sm">
+                                {deliveryData.tipoFrete === "SEDEX"
+                                  ? "R$ 14,62"
+                                  : subtotal > 100 ? "Grátis" : "R$ 5,99"}
+                              </span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -270,7 +319,7 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                   </h4>
                   <div className="text-xs text-muted-foreground space-y-1">
                     <p>• Frete grátis em pedidos acima de R$ 100</p>
-                    <p>• Entrega padrão: 3-5 dias úteis</p>
+                    <p>• Entrega padrão: 7-10 dias úteis</p>
                     <p>• Entrega expressa disponível no checkout</p>
                   </div>
                 </CardContent>
