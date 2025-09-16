@@ -9,6 +9,7 @@ import { useCheckout } from "@/hooks/use-checkout";
 import { useEzzyPag } from "@/hooks/use-ezzypag";
 import { useCart } from "@/contexts/CartContext";
 import { useUtmCapture, getUtmsFromCookie } from "@/hooks/utm-utils";
+import { useToast } from "@/hooks/use-toast";
 import { enviarConversaoUtmify } from "@/hooks/utmify-api";
 import { QRCodeCanvas } from 'qrcode.react';
 import { criarPixBackend, criarCartaoBackend } from "@/hooks/ezzypag-backend";
@@ -28,6 +29,7 @@ interface CheckoutFormProps {
 }
 
 export function CheckoutForm({ onClose, total }: CheckoutFormProps) {
+  const { toast } = useToast();
   useUtmCapture();
   const [showPixModal, setShowPixModal] = useState(false);
   const { getCartTotal } = useCart();
@@ -156,6 +158,11 @@ export function CheckoutForm({ onClose, total }: CheckoutFormProps) {
 
     const validationError = validateForm();
     if (validationError) {
+      toast({
+        title: "Erro no checkout PIX",
+        description: validationError,
+        variant: "destructive",
+      });
       return;
     }
 
@@ -193,7 +200,27 @@ export function CheckoutForm({ onClose, total }: CheckoutFormProps) {
 
     } catch (err) {
       console.error("Erro no checkout:", err);
-      alert("Erro ao gerar PIX: " + (err?.message || err));
+      let userMessage = "Erro ao gerar PIX. Tente novamente.";
+      // Axios error: err.response?.data?.message
+      const apiMessage = err?.response?.data?.message || err?.message;
+      if (apiMessage) {
+        if (typeof apiMessage === "string" && apiMessage.toLowerCase().includes("invalid cpf")) {
+          userMessage = "CPF inválido. Por favor, verifique o número informado.";
+        } else if (apiMessage.toLowerCase().includes("invalid email")) {
+          userMessage = "E-mail inválido. Verifique o endereço informado.";
+        } else if (apiMessage.toLowerCase().includes("invalid phone")) {
+          userMessage = "Telefone inválido. Verifique o número informado.";
+        } else if (apiMessage.toLowerCase().includes("400")) {
+          userMessage = "Dados inválidos. Por favor, revise as informações.";
+        } else {
+          userMessage = apiMessage;
+        }
+      }
+      toast({
+        title: "Erro no checkout PIX",
+        description: userMessage,
+        variant: "destructive",
+      });
     } finally {
       setIsSubmittingForm(false);
     }
