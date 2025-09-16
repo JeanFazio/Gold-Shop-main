@@ -6,9 +6,15 @@ import path from 'path';
 const router = express.Router();
 const utmifyApiUrl = "https://api.utmify.com.br/api-credentials/orders";
 const utmifyToken = process.env.UTMIFY_TOKEN || "D4k6ecjGxaoGIbUNIeP0DZ8xGNKRNNj98MVf";
-const logDir = path.join(__dirname, '../logs');
+// Detecta ambiente serverless/netlify
+const isServerless = process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME;
+const logDir = isServerless ? '/tmp/netlify-logs' : path.join(__dirname, '../logs');
 if (!fs.existsSync(logDir)) {
-  fs.mkdirSync(logDir, { recursive: true });
+  try {
+    fs.mkdirSync(logDir, { recursive: true });
+  } catch (err) {
+    // Em ambiente serverless pode não ser possível criar diretório, ignora erro
+  }
 }
 const logFile = path.join(logDir, 'utmify-' + new Date().toISOString().slice(0,10) + '.log');
 

@@ -38,8 +38,9 @@ router.post('/pix', async (req, res) => {
     console.log('RESPOSTA EZZYPAG:', response.data);
     res.status(response.status).json(response.data);
   } catch (err: any) {
-    console.error('ERRO EZZYPAG:', err?.response?.data || err.message);
-    res.status(400).json({ success: false, error: err.message, details: err?.response?.data });
+    const apiError = err?.response?.data?.message || err?.response?.data?.error || err.message;
+    console.error('ERRO EZZYPAG:', apiError);
+    res.status(400).json({ success: false, message: apiError });
   }
 });
 
