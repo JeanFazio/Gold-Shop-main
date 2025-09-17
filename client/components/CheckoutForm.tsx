@@ -29,6 +29,8 @@ interface CheckoutFormProps {
 }
 
 export function CheckoutForm({ onClose, total }: CheckoutFormProps) {
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string>("");
   const { toast } = useToast();
   useUtmCapture();
   const [showPixModal, setShowPixModal] = useState(false);
@@ -144,7 +146,9 @@ export function CheckoutForm({ onClose, total }: CheckoutFormProps) {
         status: cardResp.status || 'paid',
       });
 
-      alert("Pagamento realizado!" + JSON.stringify(cardResp));
+      // Exibe modal de sucesso
+      setSuccessMessage("Pagamento realizado com sucesso! Obrigado pela compra.");
+      setShowSuccessModal(true);
     } catch (err) {
       console.error("Erro no checkout:", err);
       alert("Erro no pagamento: " + (err?.message || err));
@@ -231,6 +235,19 @@ export function CheckoutForm({ onClose, total }: CheckoutFormProps) {
 
   return (
     <>
+      {/* Modal de sucesso de pagamento */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+          <div className="bg-white rounded-lg p-10 shadow-lg flex flex-col items-center max-w-md w-full">
+            <h3 className="font-bold text-green-700 mb-2 text-lg">Sucesso!</h3>
+            <div className="text-green-800 text-base mb-4 text-center">{successMessage}</div>
+            <Button className="mt-2 w-full bg-primarycolor hover:bg-primarycolor/90" onClick={() => setShowSuccessModal(false)}>
+              Fechar
+            </Button>
+          </div>
+        </div>
+      )}
+      {/* Modal PIX */}
       {showPixModal && pixData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
           <div className="bg-white rounded-lg p-12 shadow-lg flex flex-col items-center max-w-md w-full">
@@ -255,6 +272,7 @@ export function CheckoutForm({ onClose, total }: CheckoutFormProps) {
           </div>
         </div>
       )}
+      {/* Formulário */}
       <Card className="w-full max-w-lg sm:max-w-full sm:rounded-none sm:shadow-none sm:border-0 max-h-[70vh] my-4 overflow-y-auto p-2 sm:p-0">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
