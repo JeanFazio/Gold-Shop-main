@@ -191,7 +191,7 @@ export function CheckoutForm({ onClose, total }: CheckoutFormProps) {
         },
         products: [],
         paymentMethod: 'pix',
-        status: 'waiting_payment',
+        status: 'paid',
       });
 
       // Exibe modal com QR Code e dados do cliente
