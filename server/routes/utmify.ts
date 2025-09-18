@@ -31,30 +31,62 @@ router.post('/order', async (req, res) => {
     writeLog('📥 Dados recebidos', req.body);
     const inputData = req.body;
 
-    const paidStatuses = ['paid', 'PAID', 'approved', 'APPROVED', 'completed', 'COMPLETED'];
-    if (inputData.status && !paidStatuses.includes(inputData.status)) {
-      writeLog('⏭️ Status ignorado - não é pagamento confirmado', { status_recebido: inputData.status, status_aceitos: paidStatuses });
-      return res.status(200).json({ message: 'Status ignorado - aguardando pagamento confirmado' });
-    }
-    writeLog('✅ Status de pagamento confirmado detectado', { status: inputData.status });
-
-    // Garante todos os campos UTM como string ou null
+    // Monta payload flexível para Utmify, inspirado no exemplo PHP
     const utms = inputData.trackingParameters || {};
     const utmPayload = {
-      utm_source: typeof utms.utm_source === 'string' ? utms.utm_source : null,
-      utm_medium: typeof utms.utm_medium === 'string' ? utms.utm_medium : null,
-      utm_campaign: typeof utms.utm_campaign === 'string' ? utms.utm_campaign : null,
-      utm_content: typeof utms.utm_content === 'string' ? utms.utm_content : null,
-      utm_term: typeof utms.utm_term === 'string' ? utms.utm_term : null,
+      src: utms.src || null,
+      sck: utms.sck || null,
+      utm_source: utms.utm_source || null,
+      utm_campaign: utms.utm_campaign || null,
+      utm_medium: utms.utm_medium || null,
+      utm_content: utms.utm_content || null,
+      utm_term: utms.utm_term || null,
+      xcod: utms.xcod || null,
+      fbclid: utms.fbclid || null,
+      gclid: utms.gclid || null,
+      ttclid: utms.ttclid || null,
     };
+    // Garante pelo menos 1 produto genérico se não vier nenhum
+    let products = Array.isArray(inputData.products) && inputData.products.length > 0
+      ? inputData.products.map((p: any, idx: number) => ({
+          id: p.id || `prod-${idx}-${Date.now()}`,
+          name: p.name || 'Produto Genérico',
+          planId: p.planId || null,
+          planName: p.planName || null,
+          quantity: p.quantity || 1,
+          priceInCents: p.priceInCents || Math.round(inputData.amount * 100) || 100
+        }))
+      : [{
+          id: `prod-1-${Date.now()}`,
+          name: 'Produto Genérico',
+          planId: null,
+          planName: null,
+          quantity: 1,
+          priceInCents: Math.round(inputData.amount * 100) || 100
+        }];
+
+    // Garante todos os campos de comissão como número
+    const commission = {
+      totalPriceInCents: typeof inputData.commission?.totalPriceInCents === 'number'
+        ? inputData.commission.totalPriceInCents
+        : Math.round(inputData.amount * 100) || 100,
+      gatewayFeeInCents: typeof inputData.commission?.gatewayFeeInCents === 'number'
+        ? inputData.commission.gatewayFeeInCents
+        : 0,
+      userCommissionInCents: typeof inputData.commission?.userCommissionInCents === 'number'
+        ? inputData.commission.userCommissionInCents
+        : Math.round(inputData.amount * 100) || 100,
+      currency: 'BRL'
+    };
+
     const utmifyData = {
       orderId: inputData.orderId,
       platform: 'Aurixpay',
       paymentMethod: inputData.paymentMethod || 'pix',
-      status: inputData.status || 'paid',
+      status: inputData.status || 'waiting_payment',
       createdAt: inputData.createdAt || new Date().toISOString(),
-      approvedDate: inputData.approvedDate || new Date().toISOString(),
-      refundedAt: null,
+      approvedDate: inputData.approvedDate || null,
+      refundedAt: inputData.refundedAt || null,
       customer: {
         name: inputData.customer?.name,
         email: inputData.customer?.email,
@@ -63,23 +95,9 @@ router.post('/order', async (req, res) => {
         country: 'BR',
         ip: req.ip || null
       },
-      products: [
-        {
-          id: inputData.products?.[0]?.id || 'prod-' + Date.now(),
-          name: inputData.products?.[0]?.name,
-          planId: null,
-          planName: null,
-          quantity: inputData.products?.[0]?.quantity,
-          priceInCents: inputData.products?.[0]?.priceInCents
-        }
-      ],
+      products,
       trackingParameters: utmPayload,
-      commission: {
-        totalPriceInCents: inputData.commission?.totalPriceInCents,
-        gatewayFeeInCents: inputData.commission?.gatewayFeeInCents || 0,
-        userCommissionInCents: inputData.commission?.userCommissionInCents || inputData.commission?.totalPriceInCents,
-        currency: 'BRL'
-      },
+      commission,
       isTest: !!inputData.isTest
     };
     writeLog('📤 Dados formatados para Utmify', utmifyData);
