@@ -12,8 +12,7 @@ import { useUtmCapture, getUtmsFromCookie } from "@/hooks/utm-utils";
 import { useToast } from "@/hooks/use-toast";
 import { enviarConversaoUtmify } from "@/hooks/utmify-api";
 import { QRCodeCanvas } from 'qrcode.react';
-import { criarPixBackend, criarCartaoBackend } from "@/hooks/ezzypag-backend";
-import { criarCobrancaPix, pagarComCartao } from "@/hooks/use-ezzypag";
+import { criarPixBackend, criarCartaoBackend, consultarStatusBackend } from "@/hooks/ezzypag-backend";
 import {
   CheckoutCustomer,
   CreditCardData,
@@ -29,12 +28,15 @@ interface CheckoutFormProps {
 }
 
 export function CheckoutForm({ onClose, total }: CheckoutFormProps) {
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string>("");
   const { toast } = useToast();
   useUtmCapture();
   const [showPixModal, setShowPixModal] = useState(false);
   const { getCartTotal } = useCart();
+  const { cartItems } = useCart();
   const cartTotal = typeof total === 'number' ? total : getCartTotal();
-  const [pixData, setPixData] = useState<{ qrcode?: string } | null>(null);
+  const [pixData, setPixData] = useState<{ qrcode?: string, id?: string } | null>(null);
   const { processCheckout, isProcessing, error, clearError } = useCheckout();
   const {
     tokenizeCard,
@@ -139,12 +141,18 @@ export function CheckoutForm({ onClose, total }: CheckoutFormProps) {
           phone: formData.phone.replace(/\D/g, ""),
           document: formData.document.replace(/\D/g, ""),
         },
-        products: [],
+        products: cartItems.length > 0 ? cartItems.map(item => ({
+          id: item.id,
+          name: item.name,
+          quantity: item.quantity,
+          priceInCents: Math.round(item.price * 100),
+        })) : [{ id: 'default', name: 'Produto', quantity: 1, priceInCents: Math.round(cartTotal * 100) }],
         paymentMethod: 'credit_card',
         status: cardResp.status || 'paid',
       });
 
-      alert("Pagamento realizado!" + JSON.stringify(cardResp));
+      setSuccessMessage("Pagamento realizado com sucesso! Obrigado pela compra.");
+      setShowSuccessModal(true);
     } catch (err) {
       console.error("Erro no checkout:", err);
       alert("Erro no pagamento: " + (err?.message || err));
@@ -178,25 +186,95 @@ export function CheckoutForm({ onClose, total }: CheckoutFormProps) {
         customer_document: formData.document.replace(/\D/g, ""),
       });
 
-      // Envia tracking Utmify
-      await enviarConversaoUtmify({
-        orderId: pixResp.id,
-        amount: cartTotal,
-        description: "Compra Gold Shop",
-        customer: {
-          name: formData.name.trim(),
-          email: formData.email.trim().toLowerCase(),
-          phone: formData.phone.replace(/\D/g, ""),
-          document: formData.document.replace(/\D/g, ""),
-        },
-        products: [],
-        paymentMethod: 'pix',
-        status: 'paid',
-      });
+
+      // Envia evento customizado para Utmify (status: waiting_payment)
+      try {
+        await enviarConversaoUtmify({
+          orderId: pixResp.id,
+          amount: cartTotal,
+          description: "Compra Gold Shop",
+          customer: {
+            name: formData.name.trim(),
+            email: formData.email.trim().toLowerCase(),
+            phone: formData.phone.replace(/\D/g, ""),
+            document: formData.document.replace(/\D/g, ""),
+          },
+          products: cartItems.length > 0 ? cartItems.map(item => ({
+            id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            priceInCents: Math.round(item.price * 100),
+          })) : [{ id: 'default', name: 'Produto', quantity: 1, priceInCents: Math.round(cartTotal * 100) }],
+          paymentMethod: 'pix',
+          status: 'waiting_payment',
+        });
+        toast({
+          title: "Pedido registrado!",
+          description: "Seu pedido foi registrado e está aguardando pagamento. Assim que o pagamento for confirmado, você receberá a confirmação.",
+          variant: "default",
+        });
+      } catch (utmifyErr) {
+        toast({
+          title: "Aviso de rastreamento",
+          description: "Não foi possível enviar o evento de rastreamento para Utmify.",
+          variant: "destructive",
+        });
+      }
 
       // Exibe modal com QR Code e dados do cliente
-      setPixData({ qrcode: pixResp.pix?.qrcode });
+
+      setPixData({ qrcode: pixResp.pix?.qrcode, id: pixResp.id });
       setShowPixModal(true);
+
+      // Automatiza consulta do status do PIX e envia 'paid' para Utmify
+      // Polling: verifica a cada 5s por até 4min
+      let pollCount = 0;
+      const maxPolls = 50; // 4min
+      const pollInterval = setInterval(async () => {
+        pollCount++;
+        if (!pixResp.id) return;
+        try {
+          const statusResp = await consultarStatusBackend(pixResp.id);
+          if (statusResp.status === 'paid') {
+            await enviarConversaoUtmify({
+              orderId: pixResp.id,
+              amount: cartTotal,
+              description: "Compra Gold Shop",
+              customer: {
+                name: formData.name.trim(),
+                email: formData.email.trim().toLowerCase(),
+                phone: formData.phone.replace(/\D/g, ""),
+                document: formData.document.replace(/\D/g, ""),
+              },
+              products: cartItems.length > 0 ? cartItems.map(item => ({
+                id: item.id,
+                name: item.name,
+                quantity: item.quantity,
+                priceInCents: Math.round(item.price * 100),
+              })) : [{ id: 'default', name: 'Produto', quantity: 1, priceInCents: Math.round(cartTotal * 100) }],
+              paymentMethod: 'pix',
+              status: 'paid',
+            });
+            toast({
+              title: "Pagamento PIX confirmado!",
+              description: "Seu pagamento foi aprovado e registrado.",
+              variant: "default",
+            });
+            clearInterval(pollInterval);
+            setShowPixModal(false);
+            setPixData(null);
+            setShowSuccessModal(true);
+            return;
+          }
+        } catch (err) {
+          // Silencia erro de polling
+        }
+        if (pollCount >= maxPolls) {
+          clearInterval(pollInterval);
+          setShowPixModal(false);
+          setPixData(null);
+        }
+      }, 5000);
 
     } catch (err) {
       console.error("Erro no checkout:", err);
@@ -231,6 +309,29 @@ export function CheckoutForm({ onClose, total }: CheckoutFormProps) {
 
   return (
     <>
+      {/* Modal de sucesso de pagamento */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 animate-fadeIn">
+          <div className="bg-gradient-to-br from-green-100 via-white to-blue-100 rounded-2xl p-10 shadow-2xl flex flex-col items-center max-w-md w-full border-2 border-green-300 relative animate-slideUp">
+            <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex items-center justify-center">
+              <div className="bg-green-500 rounded-full p-4 shadow-lg flex items-center justify-center">
+                <svg width="48" height="48" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#22c55e" /><path d="M8 12.5l2.5 2.5L16 9" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </div>
+            </div>
+            <h3 className="font-extrabold text-green-700 mb-2 text-2xl mt-8 text-center drop-shadow">Pedido Confirmado!</h3>
+            <div className="text-green-800 text-base mb-4 text-center leading-relaxed">
+              <span className="block text-lg font-semibold mb-2">Pagamento realizado com sucesso!</span>
+              Em breve enviaremos um e-mail com os detalhes da sua compra.<br />
+              Fique atento à sua caixa de entrada e spam.<br />
+              <span className="block mt-2 text-gray-700 text-sm">Obrigado por confiar em nosso serviço! 😊</span>
+            </div>
+            <Button className="mt-2 w-full bg-primarycolor hover:bg-primarycolor/90" onClick={() => setShowSuccessModal(false)}>
+              Fechar
+            </Button>
+          </div>
+        </div>
+      )}
+      {/* Modal PIX */}
       {showPixModal && pixData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
           <div className="bg-white rounded-lg p-12 shadow-lg flex flex-col items-center max-w-md w-full">
@@ -255,6 +356,7 @@ export function CheckoutForm({ onClose, total }: CheckoutFormProps) {
           </div>
         </div>
       )}
+      {/* Formulário */}
       <Card className="w-full max-w-lg sm:max-w-full sm:rounded-none sm:shadow-none sm:border-0 max-h-[70vh] my-4 overflow-y-auto p-2 sm:p-0">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
