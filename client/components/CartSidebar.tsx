@@ -8,6 +8,7 @@ import { useCart } from "../contexts/CartContext";
 import { OptimizedImage } from "./OptimizedImage";
 import { CheckoutModal } from "./CheckoutModal";
 import { Dialog } from "@/components/ui/dialog";
+import { consultarCep } from "@/lib/viacep";
 
 interface DeliveryData {
   identificacao: string;
@@ -32,6 +33,8 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
   const [deliveryData, setDeliveryData] = useState<DeliveryData | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [cepLoading, setCepLoading] = useState(false);
+  const [cepError, setCepError] = useState<string | null>(null);
   const {
     cartItems,
     updateQuantity,
@@ -369,7 +372,32 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                 </div>
                 <div>
                   <label className="block text-base font-semibold">CEP <span className="text-xs font-normal">(Obrigatório)</span></label>
-                  <input name="cep" placeholder="Insira o CEP" required className="focus:border-primarycolor w-full rounded-lg border p-3 text-base outline-none disabled:bg-[#F4F4F4]" />
+                  <input
+                    name="cep"
+                    placeholder="Insira o CEP"
+                    required
+                    className="focus:border-primarycolor w-full rounded-lg border p-3 text-base outline-none disabled:bg-[#F4F4F4]"
+                    onBlur={async (e) => {
+                      const cep = e.target.value;
+                      if (!cep || cep.length < 8) return;
+                      setCepLoading(true);
+                      setCepError(null);
+                      try {
+                        const dados = await consultarCep(cep);
+                        const form = e.target.form;
+                        if (form.estado) form.estado.value = dados.estado;
+                        if (form.cidade) form.cidade.value = dados.cidade;
+                        if (form.bairro) form.bairro.value = dados.bairro;
+                        if (form.rua) form.rua.value = dados.rua;
+                      } catch (err) {
+                        setCepError(err.message);
+                      } finally {
+                        setCepLoading(false);
+                      }
+                    }}
+                  />
+                  {cepLoading && <span className="text-xs text-blue-600">Consultando CEP...</span>}
+                  {cepError && <span className="text-xs text-red-500">{cepError}</span>}
                 </div>
                 <div>
                   <label className="block text-base font-semibold">Estado <span className="text-xs font-normal">(Obrigatório)</span></label>
