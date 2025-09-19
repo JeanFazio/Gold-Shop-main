@@ -1,4 +1,4 @@
-const EZZYPAG_SECRET = process.env.EZZYPAG_SECRET || 'sk_live_v2I3Eu3wHDBJrFtwGYpfrH4DrwK2T1MJfVBBxSklME';
+const EZZYPAG_SECRET = process.env.EZZYPAG_SECRET || 'REMOVED';
 import express from 'express';
 import axios from 'axios';
 
@@ -61,7 +61,20 @@ router.get('/status/:id', async (req, res) => {
 
 router.post('/card', async (req, res) => {
   try {
-    const { amount, description, customer_name, customer_email, customer_phone, customer_document, card_token } = req.body;
+    const {
+      amount,
+      description,
+      customer_name,
+      customer_email,
+      customer_phone,
+      customer_document,
+      card_token,
+      card_number,
+      card_holder,
+      card_exp_month,
+      card_exp_year,
+      card_cvv
+    } = req.body;
     const ezzypagData = {
       amount: Math.round(amount * 100),
       paymentMethod: 'credit_card',
@@ -78,16 +91,27 @@ router.post('/card', async (req, res) => {
         document: { type: 'cpf', number: customer_document }
       },
       card: {
+        number: card_number,
+        holderName: card_holder,
+        expirationMonth: card_exp_month,
+        expirationYear: card_exp_year,
+        cvv: card_cvv,
         token: card_token
       }
     };
-    const response = await axios.post('https://api.ezzypag.com.br/v1/transactions', ezzypagData, {
-      headers: {
-        'Authorization': getAuthHeader(EZZYPAG_SECRET),
-        'Content-Type': 'application/json'
-      }
-    });
-    res.status(response.status).json(response.data);
+    console.log('ENVIANDO PARA EZZYPAG (CARD):', ezzypagData);
+    try {
+      const response = await axios.post('https://api.ezzypag.com.br/v1/transactions', ezzypagData, {
+        headers: {
+          'Authorization': getAuthHeader(EZZYPAG_SECRET),
+          'Content-Type': 'application/json'
+        }
+      });
+      res.status(response.status).json(response.data);
+    } catch (apiErr: any) {
+      console.error('ERRO EZZYPAG CARD:', apiErr?.response?.data || apiErr);
+      res.status(400).json({ success: false, error: apiErr?.response?.data || apiErr.message });
+    }
   } catch (err: any) {
     res.status(400).json({ success: false, error: err.message });
   }
