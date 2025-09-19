@@ -120,7 +120,7 @@ export function CheckoutForm({ onClose, total }: CheckoutFormProps) {
       }
 
       // 1. Chamar backend para pagamento com cartão
-      const cardResp = await criarCartaoBackend({
+      const payload = {
         amount: cartTotal,
         description: "Compra Gold Shop",
         customer_name: formData.name.trim(),
@@ -128,7 +128,25 @@ export function CheckoutForm({ onClose, total }: CheckoutFormProps) {
         customer_phone: formData.phone.replace(/\D/g, ""),
         customer_document: formData.document.replace(/\D/g, ""),
         card_token: cardToken,
-      });
+        card_number: cardData.number.replace(/\s/g, ""),
+        card_holder: cardData.holderName.trim().toUpperCase(),
+        card_exp_month: cardData.expMonth,
+        card_exp_year: cardData.expYear,
+        card_cvv: cardData.cvv
+      };
+      console.log("Payload enviado para backend do cartão:", payload);
+      const cardResp = await criarCartaoBackend(payload);
+
+      if (cardResp.status === 'refused') {
+        let refusedMsg = cardResp.refusedReason?.description || 'Pagamento recusado pelo cartão. Tente outro cartão ou verifique os dados.';
+        toast({
+          title: 'Pagamento recusado',
+          description: refusedMsg,
+          variant: 'destructive',
+        });
+        setIsSubmittingForm(false);
+        return;
+      }
 
       // 2. Envia tracking Utmify
       await enviarConversaoUtmify({
@@ -154,8 +172,17 @@ export function CheckoutForm({ onClose, total }: CheckoutFormProps) {
       setSuccessMessage("Pagamento realizado com sucesso! Obrigado pela compra.");
       setShowSuccessModal(true);
     } catch (err) {
-      console.error("Erro no checkout:", err);
-      alert("Erro no pagamento: " + (err?.message || err));
+      let apiMessage = err?.response?.data?.message || err?.response?.data?.error || err?.message;
+      if (typeof apiMessage === 'string' && apiMessage.includes('credit_card_blacklisted')) {
+        toast({
+          title: 'Cartão bloqueado',
+          description: 'Este cartão não pode ser utilizado. Tente outro cartão ou entre em contato com o emissor.',
+          variant: 'destructive',
+        });
+      } else {
+        console.error("Erro no checkout:", err, apiMessage);
+        alert("Erro no pagamento: " + (apiMessage || err));
+      }
     } finally {
       setIsSubmittingForm(false);
     }
