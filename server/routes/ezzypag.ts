@@ -1,4 +1,4 @@
-const EZZYPAG_SECRET = process.env.EZZYPAG_SECRET;
+const EZZYPAG_SECRET = process.env.EZZYPAG_SECRET || 'REMOVED';
 import express from 'express';
 import axios from 'axios';
 
