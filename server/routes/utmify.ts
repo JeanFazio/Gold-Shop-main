@@ -5,7 +5,7 @@ import path from 'path';
 
 const router = express.Router();
 const utmifyApiUrl = "https://api.utmify.com.br/api-credentials/orders";
-const utmifyToken = process.env.UTMIFY_TOKEN || "REMOVED";
+const utmifyToken = process.env.UTMIFY_TOKEN || "X3yP48xGN3pRxs4Si9nE0CkFoR8uFUagQHc3";
 const isServerless = process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME;
 const logDir = isServerless ? '/tmp/netlify-logs' : path.join(__dirname, '../logs');
 if (!fs.existsSync(logDir)) {

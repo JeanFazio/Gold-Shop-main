@@ -615,14 +615,26 @@ function ProductCard({ product }: { product: (typeof decodedProducts)[0] }) {
   );
 }
 
-export function ProductGrid() {
+interface ProductGridProps {
+  searchText?: string;
+}
+
+export function ProductGrid({ searchText = "" }: ProductGridProps) {
   const { activeBrand } = useBrand();
 
   // Filter products based on active brand
-  const filteredProducts =
+  let filteredProducts =
     activeBrand.name === "Todos Produtos Grupo Goold"
       ? decodedProducts
       : decodedProducts.filter((product) => product.brand === activeBrand.name);
+
+  // Filter by search text (case-insensitive, partial)
+  if (searchText.trim()) {
+    const lower = searchText.trim().toLowerCase();
+    filteredProducts = filteredProducts.filter(
+      (product) => product.name.toLowerCase().includes(lower)
+    );
+  }
 
   return (
     <section id="products" className="scroll-mt-52">

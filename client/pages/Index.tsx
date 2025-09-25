@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import { Header } from "../components/Header";
 import { HeroSection } from "../components/HeroSection";
 import { SubscriptionBanner } from "../components/SubscriptionBanner";
@@ -7,6 +8,7 @@ import { ProductGrid } from "../components/ProductGrid";
 import { Footer } from "../components/Footer";
 
 export default function Index() {
+  const [searchText, setSearchText] = useState("");
   return (
     <main className="h-dvh">
       {/* Fixed Header */}
@@ -28,10 +30,10 @@ export default function Index() {
           <BrandSelection />
 
           {/* Search Section */}
-          <SearchSection />
+          <SearchSection searchText={searchText} setSearchText={setSearchText}  />
 
           {/* Product Grid */}
-          <ProductGrid />
+          <ProductGrid searchText={searchText} />
 
           {/* Footer */}
           <Footer />

@@ -1,4 +1,11 @@
-export function SearchSection() {
+import React, {useState} from "react";
+
+interface SearchSectionProps {
+  searchText: string;
+  setSearchText: (value: string) => void;
+}
+
+export function SearchSection({ searchText, setSearchText }: SearchSectionProps) {
   return (
     <section className="mt-2 mb-2 h-[96px]">
       <div className="flex w-full items-center justify-start gap-4 py-3 md:py-6">
@@ -8,6 +15,8 @@ export function SearchSection() {
             type="text"
             placeholder="Pesquisar item..."
             className="h-12 w-full flex-grow rounded-full border bg-white py-2.5 pr-2 pl-12 focus:outline-none"
+            value={searchText}
+            onChange={e => setSearchText(e.target.value)}
           />
           <svg
             role="img"
