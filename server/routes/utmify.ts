@@ -93,7 +93,7 @@ router.post('/order', async (req, res) => {
         phone: inputData.customer?.phone || null,
         document: inputData.customer?.document,
         country: 'BR',
-        ip: req.ip || null
+          ip: req.ip || '0.0.0.0'
       },
       products,
       trackingParameters: utmPayload,
